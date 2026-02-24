@@ -15,10 +15,12 @@ jobs:
           clean: true
           submodules: false
 
-      - name: Login to Registry
-        run: echo '${{ secrets.YC_SA_KEY_FILE }}' > key.json
-          cat key.json | docker login --username json_key --password-stdin cr.yandex
-          rm key.json
+      - name: Login to Yandex Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.YC_SA_KEY_FILE }}
 
       - name: Build and Push
         run: |
