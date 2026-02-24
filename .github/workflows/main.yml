@@ -3,11 +3,11 @@ name: Hybrid CI/CD RocketChat
 on:
   push:
     branches:
-      - develop  # Запускаем при пуше в develop
+      - develop
 
 jobs:
   build-and-push:
-    runs-on: [self-hosted, local-dev] # Ваша VM1
+    runs-on: [self-hosted, local-dev]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -25,10 +25,12 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: [self-hosted, production-broker] # Ваш Раннер в K8s
+    runs-on: [self-hosted, production-broker]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Deploy to K8s
         run: |
