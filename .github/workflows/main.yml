@@ -16,7 +16,9 @@ jobs:
           submodules: false
 
       - name: Login to Registry
-        run: echo "${{ secrets.YC_SA_KEY_FILE }}" | docker login --username json_key --password-stdin cr.yandex
+        run: echo '${{ secrets.YC_SA_KEY_FILE }}' > key.json
+          cat key.json | docker login --username json_key --password-stdin cr.yandex
+          rm key.json
 
       - name: Build and Push
         run: |
