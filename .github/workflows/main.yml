@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          submodules: false
 
       - name: Login to Registry
         run: echo "${{ secrets.YC_SA_KEY_FILE }}" | docker login --username json_key --password-stdin cr.yandex
