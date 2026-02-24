@@ -1,0 +1,60 @@
+name: Hybrid CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main # Запускать при пуше в ветку main
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: [self-hosted, local-dev] # Использовать локальный раннер на VM1 (по метке local-dev)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Yandex Container Registry
+        run: echo "${{ secrets.YC_SA_KEY_FILE }}" | docker login --username json_key --password-stdin cr.yandex
+        # Используем Service Account для логина в Yandex Container Registry
+
+      - name: Build Docker Image
+        run: |
+          docker build -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} .
+          # Собираем образ с тегом, включающим SHA коммита для уникальности
+
+      - name: Push Docker Image
+        run: |
+          docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
+          # Пушим образ в Yandex Container Registry
+
+  deploy-to-kubernetes:
+    name: Deploy to Kubernetes
+    needs: build-and-push # Запустить этот Job только после успешного выполнения build-and-push
+    runs-on: [self-hosted, production-broker] # Использовать K8s раннер (по метке production-broker)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # (Опционально) Убедитесь, что kubeconfig файл доступен.
+      # Наш раннер в K8s уже имеет kubeconfig смонтированным из секрета,
+      # но если бы это был другой раннер, можно было бы сделать так:
+      # - name: Setup Kubeconfig
+      #   run: |
+      #     mkdir -p ~/.kube
+      #     echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+      #     chmod 600 ~/.kube/config
+
+      - name: Deploy to Kubernetes
+        uses: steebchen/kubectl@v2.0.0
+        with:
+          # kubeconfig: '${{ secrets.KUBE_CONFIG_DATA }}' # Kubeconfig уже в раннере, но для наглядности
+          command: |
+            kubectl apply -f k8s/production-deployment.yaml --kubeconfig=/home/runner/.kube/config
+            kubectl set image deployment/rocket-chat rocket-chat=cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} -n production --kubeconfig=/home/runner/.kube/config
+          # kubeconfig для kubectl apply не нужен, если в ServiceAccount раннера уже есть права.
+          # Но я добавил его для явного указания, что раннер работает с этим файлом.
+          # В вашем случае kubeconfig уже смонтирован в /home/runner/.kube/config,
+          # поэтому раннер автоматически будет его использовать при вызове kubectl.
+          # Поэтому --kubeconfig=/home/runner/.kube/config здесь ИЗБЫТОЧЕН, но не повредит.
