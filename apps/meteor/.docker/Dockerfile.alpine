@@ -48,8 +48,6 @@ USER rocketchat
 
 COPY --from=builder --chown=rocketchat:rocketchat /app /app
 
-COPY --from=builder --chown=rocketchat:rocketchat /app/node_modules /app/node_modules 
-
 VOLUME /app/uploads
 
 WORKDIR /app/bundle
