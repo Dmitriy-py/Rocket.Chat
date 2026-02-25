@@ -47,21 +47,29 @@ jobs:
 
       - name: Deploy to K8s
         run: |
-          # --- УСТАНОВКА KUBECTL ---
-          # Скачиваем и устанавливаем kubectl (поскольку его нет в образе раннера)
+          # --- 1. Установка kubectl (если не установлен в образе раннера) ---
+          # Убеждаемся, что kubectl доступен, используя метод, который не требует репозиториев apt
+          
+          echo "Installing kubectl..."
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/kubectl
           
-          # Проверка установки (НЕОБЯЗАТЕЛЬНО, но полезно)
+          # Проверка (для отладки)
           kubectl version --client
-
-          # --- ПРИМЕНЕНИЕ МАНИФЕСТА И ОБНОВЛЕНИЕ ОБРАЗА ---
-          # 1. Применяем манифест (он уже содержит serviceAccount и RoleBinding, но нам нужно убедиться, что он видит новый образ)
+          
+          # --- 2. Настройка окружения Kubeconfig ---
+          # Предполагается, что KUBECONFIG был передан раннеру через env (как вы указали в предыдущем шаге)
+          # и что секрет yc-kubeconfig-secret содержит корректный файл kubeconfig.yaml
+          
+          # 3. Применение манифеста (для создания Namespace, MongoDB, и Deployment с тегом :latest)
+          echo "Applying production manifests..."
           kubectl apply -f k8s/production-deployment.yaml -n production
           
-          # 2. Обновляем образ в Deployment, используя SHA тег, который мы собрали
+          # 4. Обновление образа в Deployment до SHA-тега
+          echo "Patching deployment with new image tag..."
           kubectl set image deployment/rocket-chat rocket-chat=cr.yandex/crpkbvrrnvvh2cn7ta1f/rocket-chat:${{ github.sha }} -n production
+          
         env:
-          # Передаем KUBECONFIG, если раннер не имеет доступа к нему автоматически
-          KUBECONFIG: /home/runner/.kube/config # Укажите путь, если вы монтируете его
+          # Убеждаемся, что KUBECONFIG явно указан, если он не подхватывается автоматически
+          KUBECONFIG: /home/runner/.kube/config
