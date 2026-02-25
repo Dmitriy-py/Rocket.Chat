@@ -21,7 +21,8 @@ jobs:
 
       - name: Build and Push
         run: |
-          docker build -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} .
+          docker-compose -f docker-compose-ci.yml build rocketchat
+          docker tag cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
           docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
 
   deploy:
