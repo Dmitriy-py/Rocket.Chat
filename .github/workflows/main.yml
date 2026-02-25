@@ -21,10 +21,21 @@ jobs:
 
       - name: Build and Push
         run: |
+          # Устанавливаем переменные окружения, которые нужны docker-compose-ci.yml
+          export LOWERCASE_REPOSITORY="dmitriy-py"  # Ваш логин GitHub
+          export DOCKER_TAG="${{ github.sha }}"    # Используем короткий SHA коммита как тег
+          export DENO_VERSION="1.38.0"             # Установите актуальную версию, если это важно
+          
+          # Запускаем сборку
           docker-compose -f docker-compose-ci.yml build rocketchat
-          docker tag cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
+          
+          # Теперь тегируем и пушим, используя собранный образ
+          # Тег образа в docker-compose-ci.yml - это ghcr.io/${LOWERCASE_REPOSITORY}/rocket.chat:${DOCKER_TAG}
+          IMAGE_NAME="ghcr.io/dmitriy-py/rocket.chat:${{ github.sha }}"
+          
+          docker tag $IMAGE_NAME cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
           docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }}
-
+          
   deploy:
     needs: build-and-push
     runs-on: [self-hosted, production-broker]
