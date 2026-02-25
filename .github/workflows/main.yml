@@ -47,5 +47,21 @@ jobs:
 
       - name: Deploy to K8s
         run: |
-          kubectl apply -f k8s/production-deployment.yaml
-          kubectl set image deployment/rocket-chat rocket-chat=cr.yandex/${{ secrets.YC_REGISTRY_ID }}/rocket-chat:${{ github.sha }} -n production
+          # --- УСТАНОВКА KUBECTL ---
+          # Скачиваем и устанавливаем kubectl (поскольку его нет в образе раннера)
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          
+          # Проверка установки (НЕОБЯЗАТЕЛЬНО, но полезно)
+          kubectl version --client
+
+          # --- ПРИМЕНЕНИЕ МАНИФЕСТА И ОБНОВЛЕНИЕ ОБРАЗА ---
+          # 1. Применяем манифест (он уже содержит serviceAccount и RoleBinding, но нам нужно убедиться, что он видит новый образ)
+          kubectl apply -f k8s/production-deployment.yaml -n production
+          
+          # 2. Обновляем образ в Deployment, используя SHA тег, который мы собрали
+          kubectl set image deployment/rocket-chat rocket-chat=cr.yandex/crpkbvrrnvvh2cn7ta1f/rocket-chat:${{ github.sha }} -n production
+        env:
+          # Передаем KUBECONFIG, если раннер не имеет доступа к нему автоматически
+          KUBECONFIG: /home/runner/.kube/config # Укажите путь, если вы монтируете его
