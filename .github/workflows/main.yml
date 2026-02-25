@@ -17,9 +17,7 @@ jobs:
 
       - name: Login to Registry
         run: |
-          echo "${{ secrets.YC_SA_KEY_FILE }}" > key.json
-          docker login --username json_key --password-stdin cr.yandex < key.json
-          rm key.json
+          echo "${{ secrets.YC_OAUTH_TOKEN }}" | docker login --username oauth --password-stdin cr.yandex
 
       - name: Build and Push
         run: |
